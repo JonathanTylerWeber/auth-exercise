@@ -1,27 +1,39 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>{{user.username}}</h1>
+<h1>{{user.username}}
+</h1>
 <h4>{{user.first_name}} {{user.last_name}}</h4>
-<h4>{{user.email}}</h4>
+<h4>{{user.email}} {% if session['username'] == user.username %}
+    <form style="display:inline;" action="/users/{{user.username}}/delete" method="POST">
+        <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+    </form>
+    {% endif %}
+</h4>
 
-<a href='/users/{{user.username}}/feedback/add' method="GET"><button class="btn">Add Feedback</button></a>
+<a href='/users/{{user.username}}/feedback/add' method="GET"><button class="btn btn-success">Add Feedback</button></a>
 <div>
     {% for f in feedback %}
     <div class="card my-4">
         <div class="card-body">
             <h5 class="card-title text-info">
                 {{f.title}}
-                {% if session['username'] == f.username %}
-                <form style="display:inline;" action="/feedback/{{f.id}}/delete" method="POST">
-                    <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                </form>
-                {% endif %}
+
             </h5>
             <h6 class="card-subtitle mb-2 text-muted">{{f.username}}</h6>
             <p class="card-text">
                 {{f.content}}
             </p>
+
+            {% if session['username'] == f.username %}
+            <form style="display:inline;" action="/feedback/{{f.id}}/update" method="POST">
+                <button class="btn btn-sm btn-info">Edit</button>
+            </form>
+
+            <form style="display:inline;" action="/feedback/{{f.id}}/delete" method="POST">
+                <button class="btn btn-danger"><i class="fas fa-trash"></i></button>
+            </form>
+            {% endif %}
 
         </div>
     </div>

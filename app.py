@@ -60,6 +60,12 @@ def login_user():
 
     return render_template('login.html', form=form)
 
+@app.route('/logout')
+def logout_user():
+    session.pop('username')
+    flash('Succesfully logged out', 'info')
+    return redirect('/login')
+
 @app.route('/users/<username>', methods=['GET', 'POST'])
 def show_user(username):
     if 'username' not in session:
@@ -69,11 +75,26 @@ def show_user(username):
     feedback = Feedback.query.filter_by(username=username)
     return render_template('user.html', user=user, feedback=feedback)
 
-@app.route('/logout')
-def logout_user():
-    session.pop('username')
-    flash('Succesfully logged out', 'info')
-    return redirect('/login')
+@app.route('/users/<username>/delete', methods=['POST'])
+def delete_user(username):
+    if 'username' not in session:
+        flash('Please login', 'danger')
+        return redirect('/login')
+
+    user = User.query.filter_by(username=username).first_or_404()
+
+    if user.username != session['username']:
+        flash('You are not authorized to delete this account', 'danger')
+        return redirect(f'/users/{user.username}')
+
+    Feedback.query.filter_by(username=username).delete()
+
+    db.session.delete(user)
+    db.session.commit()
+
+    session.clear()
+    flash('Your account has been deleted', 'danger')
+    return redirect('/')
 
 @app.route('/users/<username>/feedback/add', methods=['GET', 'POST'])
 def add_feedback(username):
@@ -91,12 +112,41 @@ def add_feedback(username):
         return redirect(f'/users/{username}')
     return render_template('feedback_form.html', form=form)
 
-# POST /users/<username>/delete : Remove the user from the database and make sure to also delete all of their feedback. Clear any user information in the session and redirect to /. Make sure that only the user who is logged in can successfully delete their account.
+@app.route('/feedback/<feedback_id>/update', methods=['GET', 'POST'])
+def update_feedback(feedback_id):
+    if 'username' not in session:
+        flash('Please login', 'danger')
+        return redirect('/login')
+    feedback = Feedback.query.get_or_404(feedback_id)
+    form = FeedbackForm()
+    if form.validate_on_submit():
+        feedback.title = form.title.data
+        feedback.content = form.content.data
+        db.session.commit()
+        flash('Feedback updated!', 'success')
+        return redirect(f'/users/{feedback.username}')
+    else:
+        form.title.data = feedback.title
+        form.content.data = feedback.content
+        return render_template('edit_feedback.html', form=form, feedback=feedback)
 
-# **GET */feedback/<feedback-id>/update :*** Display a form to edit feedback — [**](https://curric.springboard.com/software-engineering-career-track/default/exercises/flask-feedback/index.html#id1)Make sure that only the user who has written that feedback can see this form **
+@app.route('/feedback/<feedback_id>/delete', methods=['POST'])
+def delete_feedback(feedback_id):
+    if 'username' not in session:
+        flash('Please login', 'danger')
+        return redirect('/login')
 
-# **POST */feedback/<feedback-id>/update :*** Update a specific piece of feedback and redirect to /users/<username> — **Make sure that only the user who has written that feedback can update it.**
+    feedback = Feedback.query.filter_by(id=feedback_id).first_or_404()
 
-# **POST */feedback/<feedback-id>/delete :*** Delete a specific piece of feedback and redirect to /users/<username> — **Make sure that only the user who has written that feedback can delete it.**
+    if feedback.username != session['username']:
+        flash('You are not authorized to delete this account', 'danger')
+        return redirect(f'/users/{session["username"]}')
+
+    db.session.delete(feedback)
+    db.session.commit()
+
+    flash('Your feedback has been deleted', 'danger')
+    return redirect(f'/users/{session["username"]}')
+
     
 
